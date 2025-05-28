@@ -89,6 +89,22 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
 async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
     text = update.message.text
+    # Обработка кнопки "Назад"
+    if text == "🔙 Назад":
+        # Если был вопрос "Русская рулетка"
+        if "current_question" in user_states[user_id]:
+            del user_states[user_id]["current_question"]
+
+        # Если пользователь проходил тест — просто отменим и начнём заново
+        if "test" in user_states[user_id]:
+            del user_states[user_id]["test"]
+
+        # Если был выбор из подкатегорий (вузы/технологии/компании)
+        if "current_category" in user_states[user_id]:
+            del user_states[user_id]["current_category"]
+
+        await update.message.reply_text("Вы вернулись в главное меню. Выберите действие:", reply_markup=main_menu_keyboard)
+        return
 
     # Выбор страны
     if text in ["🇫🇷 Франция", "🇮🇳 Индия", "🇵🇱 Польша"]:
