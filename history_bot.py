@@ -233,14 +233,34 @@ test_questions = {
     ],
     "🇮🇳 ИНДИЯ": [
         {
-            "question": "В каком году был основан IIT Bombay?",
+            "question": "В каком году был основан Индийский технологический институт в Бомбее (IIT Bombay)?",
             "options": ["1947", "1958", "1965"],
             "answer": "1958"
         },
         {
-            "question": "Какие две стороны поддерживали создание IIT Bombay?",
+            "question": "Какие две стороны совместно поддерживали создание и развитие IIT Bombay в начальный период?",
             "options": ["США и Япония", "СССР и правительство Индии", "Великобритания и Франция"],
             "answer": "СССР и правительство Индии"
+        },
+        {
+            "question": "Какой известный индийский научный институт был основан промышленником Джамшеджи Тата?",
+            "options": ["IIT Delhi", "Индийский институт науки (IISc)", "BITS Pilani"],
+            "answer": "Индийский институт науки (IISc)"
+        },
+        {
+            "question": "В каком крупном индийском городе расположен главный кампус IISc?",
+            "options": ["Дели", "Ченнаи", "Бангалор"],
+            "answer": "Бангалор"
+        },
+        {
+            "question": "Какое название получил первый индийский суперкомпьютер?",
+            "options": ["TDC", "PARAM", "Cray"],
+            "answer": "PARAM"
+        },
+        {
+            "question": "В каком году был создан суперкомпьютер PARAM 8000?",
+            "options": ["1985", "1991", "1995"],
+            "answer": "1991"
         }
     ],
     "🇵🇱 ПОЛЬША": [
@@ -265,6 +285,21 @@ test_questions = {
             "question": "Какая компания производит чипы для Apple, AMD и Nvidia?",
             "options": ["MediaTek", "UMC", "TSMC"],
             "answer": "TSMC"
+        },
+        {
+            "question": "Какой тайваньский бренд начинал с производства материнских плат и сейчас делает каждую третью в мире?",
+            "options": ["Gigabyte", "ASUS", "MSI"],
+            "answer": "ASUS"
+        },
+        {
+            "question": "Какая компания первой внедрила модель «fabless + foundry»?",
+            "options": ["Intel", "Samsung Foundry", "TSMC"],
+            "answer": "TSMC"
+        },
+        {
+            "question": "Какой тайваньский бренд в 2009 году временно стал вторым в мире по продажам ноутбуков?",
+            "options": ["Acer", "ASUS", "HTC"],
+            "answer": "Acer"
         }
     ],
     "🇫🇮 ФИНЛЯНДИЯ": [
@@ -274,12 +309,23 @@ test_questions = {
             "answer": "Университет Хельсинки"
         },
         {
-            "question": "Что разрабатывала Nokia до телеком-рынка?",
+            "question": "Что разрабатывала Nokia до выхода на телеком-рынок?",
             "options": ["Военную технику", "Резиновые сапоги и бумагу", "Автомобильные двигатели"],
             "answer": "Резиновые сапоги и бумагу"
+        },
+        {
+            "question": "Какая игра принесла Rovio мировой успех после 51 провала?",
+            "options": ["Clash of Clans", "Angry Birds", "Candy Crush Saga"],
+            "answer": "Angry Birds"
+        },
+        {
+            "question": "Какая технология, разработанная в Финляндии, улучшила цифровую связь?",
+            "options": ["Bluetooth", "ECC (Error Correction Codes)", "GSM"],
+            "answer": "ECC (Error Correction Codes)"
         }
     ]
-}  # сюда вставлен полностью
+}
+ # сюда вставлен полностью словарь test_questions
 
 # Команда /start
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -323,84 +369,77 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         options_text = "\n".join([f"{chr(97+i)}) {opt}" for i, opt in enumerate(question_data["options"])])
         await update.message.reply_text(f"1. {question_data['question']}\n{options_text}", reply_markup=main_menu_keyboard)
         user_states[user_id]["mode"] = "quiz"
+    elif text == "☠️ Русская рулетка":
+        questions = test_questions.get(country)
+        if not questions:
+            await update.message.reply_text("Нет вопросов для этой страны.", reply_markup=main_menu_keyboard)
+            return
+        roulette_q = random.choice(questions)
+        user_states[user_id]["mode"] = "roulette"
+        user_states[user_id]["roulette_q"] = roulette_q
+        options_text = "\n".join([f"{chr(97+i)}) {opt}" for i, opt in enumerate(roulette_q["options"])])
+        await update.message.reply_text(f"🎲 Русская рулетка!\nОтвечай, чтобы выжить:\n\n{roulette_q['question']}\n{options_text}",
+                                        reply_markup=main_menu_keyboard)
     elif user_states[user_id].get("mode") == "quiz":
         questions = test_questions[country]
         step = user_states[user_id]["test_step"]
         correct_answer = questions[step]["answer"].lower()
         user_input = text.strip().lower()
-        if user_input in [opt.lower() for opt in questions[step]["options"]]:
-            if user_input == correct_answer:
-                user_states[user_id]["test_score"] += 1
-            user_states[user_id]["test_step"] += 1
-            step += 1
-            if step < len(questions):
-                q = questions[step]
-                options_text = "\n".join([f"{chr(97+i)}) {opt}" for i, opt in enumerate(q["options"])])
-                await update.message.reply_text(f"{step+1}. {q['question']}\n{options_text}", reply_markup=main_menu_keyboard)
-            else:
-                score = user_states[user_id]["test_score"]
-                await update.message.reply_text(f"Тест завершён! Правильных ответов: {score}/{len(questions)}", reply_markup=main_menu_keyboard)
-                user_states[user_id].pop("mode", None)
-                user_states[user_id]["test_step"] = 0
-                user_states[user_id]["test_score"] = 0
+
+        options = questions[step]["options"]
+        letters = [chr(97+i) for i in range(len(options))]
+        letter_to_option = dict(zip(letters, options))
+
+        if user_input in letters:
+            selected = letter_to_option[user_input].lower()
+        elif user_input in [opt.lower() for opt in options]:
+            selected = user_input
         else:
-            await update.message.reply_text("Выберите вариант ответа из предложенных.")
+            await update.message.reply_text("Выберите вариант ответа (например, a, b или c).")
+            return
+
+        if selected == correct_answer:
+            user_states[user_id]["test_score"] += 1
+        user_states[user_id]["test_step"] += 1
+        step += 1
+        if step < len(questions):
+            q = questions[step]
+            options_text = "\n".join([f"{chr(97+i)}) {opt}" for i, opt in enumerate(q["options"])])
+            await update.message.reply_text(f"{step+1}. {q['question']}\n{options_text}", reply_markup=main_menu_keyboard)
+        else:
+            score = user_states[user_id]["test_score"]
+            await update.message.reply_text(f"Тест завершён! Правильных ответов: {score}/{len(questions)}", reply_markup=main_menu_keyboard)
+            user_states[user_id].pop("mode", None)
+            user_states[user_id]["test_step"] = 0
+            user_states[user_id]["test_score"] = 0
+    elif user_states[user_id].get("mode") == "roulette":
+        q = user_states[user_id]["roulette_q"]
+        correct_answer = q["answer"].lower()
+        options = q["options"]
+        letters = [chr(97+i) for i in range(len(options))]
+        letter_to_option = dict(zip(letters, options))
+
+        user_input = text.strip().lower()
+        if user_input in letters:
+            selected = letter_to_option[user_input].lower()
+        elif user_input in [opt.lower() for opt in options]:
+            selected = user_input
+        else:
+            await update.message.reply_text("Выберите вариант ответа (например, a, b или c).")
+            return
+
+        if selected == correct_answer:
+            await update.message.reply_text("😌 Уфф... Выживший!", reply_markup=main_menu_keyboard)
+        else:
+            await update.message.reply_text("💥 БАМ! Вы выбыли!", reply_markup=main_menu_keyboard)
+
+        user_states[user_id].pop("mode", None)
+        user_states[user_id].pop("roulette_q", None)
     else:
         await update.message.reply_text("Пожалуйста, выбери действие из меню.", reply_markup=main_menu_keyboard)
 
 if __name__ == "__main__":
-    app = ApplicationBuilder().token("<ТВОЙ_ТОКЕН>").build()
-    app.add_handler(CommandHandler("start", start))
-    app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
-    print("Бот запущен...")
-    app.run_polling()
-
-# Технологии (загружено ранее)
-# Технологии (загружено ранее)
-
-
-
-
-# Обработчики команд
-async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.message.reply_text("Привет! Выбери страну:", reply_markup=countries_keyboard)
-
-async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    user_id = update.effective_user.id
-    text = update.message.text
-
-    if text == "🔙 Назад":
-        if user_id in user_states:
-            del user_states[user_id]
-        await update.message.reply_text("Выберите страну:", reply_markup=countries_keyboard)
-        return
-
-    countries = list(technology_info.keys())
-
-    if text in countries:
-        user_states[user_id] = {"country": text}
-        await update.message.reply_text(f"Вы выбрали {text}. Теперь выбери действие:", reply_markup=main_menu_keyboard)
-        return
-
-    if user_id not in user_states:
-        await update.message.reply_text("Сначала выбери страну:", reply_markup=countries_keyboard)
-        return
-
-    country = user_states[user_id]["country"]
-
-    if text == "⚙️ Технологии":
-        if country in technology_info:
-            await update.message.reply_text(technology_info[country], reply_markup=main_menu_keyboard)
-        else:
-            await update.message.reply_text("Для этой страны пока нет данных.", reply_markup=main_menu_keyboard)
-        return
-
-    await update.message.reply_text("Пожалуйста, выбери действие из меню.", reply_markup=main_menu_keyboard)
-
-# Запуск бота
-if __name__ == "__main__":
-    TOKEN = "<7742146854:AAEg9VGTTpHCC5d46sn_fEPHuyIDfnyMbNw>"  # ← Вставь сюда свой токен
-    app = ApplicationBuilder().token(TOKEN).build()
+    app = ApplicationBuilder().token("7742146854:AAEg9VGTTpHCC5d46sn_fEPHuyIDfnyMbNw").build()
     app.add_handler(CommandHandler("start", start))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
     print("Бот запущен...")
